@@ -1,0 +1,4 @@
+.DS_Store
+*.autosave
+node_modules/
+.env
