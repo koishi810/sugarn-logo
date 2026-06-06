@@ -10,14 +10,14 @@ let debris = [];
 
 // Processing 版と同じ主要パラメータ。
 let logoR = 130;
-let t = 1701.6982800004732;
+let t = 1793.5222770005357;
 let defaultTime = t;
 let paused = false;
 let useHexCrop = false;
 let sectorOverlap = 0.01;
 
 let lastFrameTime = performance.now();
-let baseTimeStep = 0.0062;
+let baseTimeStep = 0.0039;
 let maxFrameStep = 3.95;
 
 let logoRotation = 0;
@@ -79,7 +79,7 @@ let cropH = 900;
 
 let textRadius = 161;
 let textArcAngle = Math.PI / 2;
-let textYOffset = -13;
+let textYOffset = -37;
 let textFontSize = 26;
 let textFontWeight = 620;
 let textFontWeightBreath = 0;
@@ -92,15 +92,15 @@ let textGray = 0;
 let textIntroDelay = 0.8;
 let textIntroDuration = 3.2;
 let nBurstDuration = 2.4;
-let nHoldDuration = 2.5;
-let nBurstMinDelay = 4;
-let nBurstMaxDelay = 12.5;
+let nHoldDuration = 4;
+let nBurstMinDelay = 6.3;
+let nBurstMaxDelay = 18.7;
 let nRetractStart = 0.78;
-let nContentChangeSpeed = 0;
+let nContentChangeSpeed = 5.8;
 let nFormulaSettleTime = 0.7;
 let nExpansionRadiusOffset = 0;
 let nExpansionArc = TWO_PI;
-let nFontWeight = 620;
+let nFontWeight = 710;
 let nFontWeightBreath = 0;
 let nRingSize = 16;
 let nRingLetterSpacing = 12;
@@ -114,10 +114,10 @@ let nFormulaIndex = 0;
 let nFormulaListText = defaultNFormulaListText();
 let defaultNFormulaList = nFormulaListText;
 
-let debrisSizeMin = 155;
+let debrisSizeMin = 73;
 let debrisSizeMax = 99;
 let debrisCount = 20;
-let seedValue = 136341;
+let seedValue = 7;
 let randomState = 1;
 const frameVariant = "centerSquare";
 
