@@ -9,19 +9,19 @@ const TIME_WRAP = TWO_PI * 4096;
 let debris = [];
 
 // Processing 版と同じ主要パラメータ。
-let logoR = 180;
-let t = 130.81183100001516;
+let logoR = 130;
+let t = 1701.6982800004732;
 let defaultTime = t;
 let paused = false;
 let useHexCrop = false;
-let sectorOverlap = 0.035;
+let sectorOverlap = 0.01;
 
 let lastFrameTime = performance.now();
-let baseTimeStep = 0.0047;
+let baseTimeStep = 0.0062;
 let maxFrameStep = 3.95;
 
 let logoRotation = 0;
-let logoRandomRotationAmount = 0;
+let logoRandomRotationAmount = 0.8;
 let logoRandomRotationSpeed = 0.45;
 let logoGray = 0;
 let logoGrayVariation = 0;
@@ -56,55 +56,55 @@ let cellEdgeSlackMin = 0;
 let cellEdgeSlackMax = 0;
 let cellEdgeSlackSpeed = 0.105;
 
-let lineFrequencyRandomness = 1.59;
-let lineAngleRandomness = 0.65;
-let lineRadiusRandomness = 0.47;
+let lineFrequencyRandomness = 2;
+let lineAngleRandomness = 0.605;
+let lineRadiusRandomness = 0.525;
 let lineRandomnessSpeed = 0.049;
 
 let cellLocalScaleMin = 1;
-let cellLocalScaleMax = 1.5;
+let cellLocalScaleMax = 3.56;
 let cellLocalScaleSpeed = 0.030;
 
 let cellBoundaryScaleRange = 60;
-let cellBoundaryScaleMax = 4;
+let cellBoundaryScaleMax = 1;
 let cellBoundaryScaleSpeed = 0.020;
 let cellBoundaryScaleSoftness = 0.68;
 
 let finalCircleMaskInset = 20;
 
-let cropX = -214;
-let cropY = -214;
-let cropW = 428;
-let cropH = 428;
+let cropX = -450;
+let cropY = -450;
+let cropW = 900;
+let cropH = 900;
 
-let textRadius = 252;
+let textRadius = 161;
 let textArcAngle = Math.PI / 2;
-let textYOffset = 0;
-let textFontSize = 30;
-let textFontWeight = 700;
+let textYOffset = -13;
+let textFontSize = 26;
+let textFontWeight = 390;
 let textFontWeightBreath = 0;
-let textLetterSpacing = 2;
-let nGap = 5;
-let textRadiusBreath = 5;
-let textLetterSpacingBreath = 1.2;
-let textBreathSpeed = 1.4;
+let textLetterSpacing = 19;
+let nGap = 17.5;
+let textRadiusBreath = 5.8;
+let textLetterSpacingBreath = 3;
+let textBreathSpeed = 0.91;
 let textGray = 0;
 let textIntroDelay = 0.8;
 let textIntroDuration = 3.2;
 let nBurstDuration = 2.4;
-let nHoldDuration = 1.2;
-let nBurstMinDelay = 2.2;
-let nBurstMaxDelay = 6.0;
+let nHoldDuration = 2.5;
+let nBurstMinDelay = 4;
+let nBurstMaxDelay = 12.5;
 let nRetractStart = 0.78;
-let nContentChangeSpeed = 18;
-let nFormulaSettleTime = 2.6;
+let nContentChangeSpeed = 0;
+let nFormulaSettleTime = 0.7;
 let nExpansionRadiusOffset = 0;
 let nExpansionArc = TWO_PI;
-let nFontWeight = 700;
+let nFontWeight = 540;
 let nFontWeightBreath = 0;
 let nRingSize = 16;
 let nRingLetterSpacing = 12;
-let nRingCount = 24;
+let nRingCount = 25;
 let nRingContentMode = 0;
 const sketchStartTime = performance.now();
 let nBurstStartTime = -999;
@@ -112,10 +112,10 @@ let nBurstNextTime = 0.9;
 let nBurstSeed = 19.37;
 let nFormulaIndex = 0;
 
-let debrisSizeMin = 230;
-let debrisSizeMax = 260;
-let debrisCount = 10;
-let seedValue = 985933;
+let debrisSizeMin = 155;
+let debrisSizeMax = 99;
+let debrisCount = 20;
+let seedValue = 136341;
 let randomState = 1;
 const frameVariant = "centerSquare";
 
