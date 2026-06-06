@@ -816,7 +816,7 @@ function drawArcText(text, centerAngle, radius, yOffset, letterSpacing) {
 
 function setupLogoTextStyle(fontSize, fontWeight, gray) {
   ctx.fillStyle = `rgb(${gray}, ${gray}, ${gray})`;
-  ctx.font = `${Math.round(fontWeight)} ${fontSize}px "Source Han Sans VF", "Source Han Sans SC", "Source Han Sans CN", "Source Han Sans JP", "Noto Sans CJK SC", "Noto Sans CJK JP", "思源黑体", "Hiragino Sans", sans-serif`;
+  ctx.font = `${Math.round(fontWeight)} ${fontSize}px "Source Han Sans VF", "Source Han Sans JP", "Noto Sans CJK JP", "源ノ角ゴシック", "Hiragino Sans", sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 }
@@ -1104,9 +1104,10 @@ function applySettingsData(data) {
 
   const values = data.parameters && typeof data.parameters === "object" ? data.parameters : {};
   for (const param of editableParameters()) {
-    const key = parameterKey(param.label);
-    if (!(key in values)) continue;
-    const next = Number(values[key]);
+    const keys = [param.label, ...(param.aliases || [])].map(parameterKey);
+    const foundKey = keys.find((key) => key in values);
+    if (!foundKey) continue;
+    const next = Number(values[foundKey]);
     if (Number.isFinite(next)) param.set(next);
   }
 }
@@ -1182,59 +1183,59 @@ const parameters = [
   { label: "扇形の重なり", min: 0, max: 0.08, step: 0.001, get: () => sectorOverlap, set: (v) => { sectorOverlap = v; } },
   { label: "ロゴ半径", min: 60, max: 260, step: 1, get: () => logoR, set: (v) => { logoR = v; } },
   { label: "ロゴ回転", min: 0, max: TWO_PI, step: 0.01, get: () => logoRotation, set: (v) => { logoRotation = v; } },
-  { label: "ロゴ随机回转幅度", min: 0, max: 0.8, step: 0.005, get: () => logoRandomRotationAmount, set: (v) => { logoRandomRotationAmount = v; } },
-  { label: "ロゴ随机回转速度", min: 0, max: 3, step: 0.01, get: () => logoRandomRotationSpeed, set: (v) => { logoRandomRotationSpeed = v; } },
-  { label: "中心灰度", min: 0, max: 255, step: 1, get: () => logoGray, set: (v) => { logoGray = v; } },
-  { label: "外侧灰度增量", min: 0, max: 255, step: 1, get: () => logoGrayVariation, set: (v) => { logoGrayVariation = v; } },
-  { label: "アニメ速度", min: 0, max: 0.012, step: 0.0001, get: () => baseTimeStep, set: (v) => { baseTimeStep = v; } },
+  { label: "ロゴランダム回転幅", min: 0, max: 0.8, step: 0.005, get: () => logoRandomRotationAmount, set: (v) => { logoRandomRotationAmount = v; } },
+  { label: "ロゴランダム回転速度", min: 0, max: 3, step: 0.01, get: () => logoRandomRotationSpeed, set: (v) => { logoRandomRotationSpeed = v; } },
+  { label: "中心グレー", min: 0, max: 255, step: 1, get: () => logoGray, set: (v) => { logoGray = v; } },
+  { label: "外側グレー増分", min: 0, max: 255, step: 1, get: () => logoGrayVariation, set: (v) => { logoGrayVariation = v; } },
+  { label: "アニメーション速度", min: 0, max: 0.012, step: 0.0001, get: () => baseTimeStep, set: (v) => { baseTimeStep = v; } },
 
-  { label: "角丸 最大", min: 0, max: 20, step: 0.1, get: () => cellCornerRoundnessMax, set: (v) => { cellCornerRoundnessMax = v; } },
+  { label: "角丸 最大値", aliases: ["角丸 最大"], min: 0, max: 20, step: 0.1, get: () => cellCornerRoundnessMax, set: (v) => { cellCornerRoundnessMax = v; } },
   { label: "周波数ゆらぎ", min: 0, max: 2, step: 0.01, get: () => lineFrequencyRandomness, set: (v) => { lineFrequencyRandomness = v; } },
   { label: "角度ゆらぎ", min: 0, max: 0.8, step: 0.005, get: () => lineAngleRandomness, set: (v) => { lineAngleRandomness = v; } },
   { label: "半径ゆらぎ", min: 0, max: 0.8, step: 0.005, get: () => lineRadiusRandomness, set: (v) => { lineRadiusRandomness = v; } },
 
-  { label: "局所拡大 最大", min: 0.2, max: 4, step: 0.01, get: () => cellLocalScaleMax, set: (v) => { cellLocalScaleMax = v; } },
-  { label: "境界拡大 最大", min: 1, max: 8, step: 0.05, get: () => cellBoundaryScaleMax, set: (v) => { cellBoundaryScaleMax = v; } },
+  { label: "局所拡大 最大値", aliases: ["局所拡大 最大"], min: 0.2, max: 4, step: 0.01, get: () => cellLocalScaleMax, set: (v) => { cellLocalScaleMax = v; } },
+  { label: "境界拡大 最大値", aliases: ["境界拡大 最大"], min: 1, max: 8, step: 0.05, get: () => cellBoundaryScaleMax, set: (v) => { cellBoundaryScaleMax = v; } },
 
-  { label: "最終円マスク内側量", min: 0, max: 80, step: 1, get: () => finalCircleMaskInset, set: (v) => { finalCircleMaskInset = v; } },
-  { label: "裁切 X", min: -450, max: 450, step: 1, get: () => cropX, set: (v) => { cropX = v; } },
-  { label: "裁切 Y", min: -450, max: 450, step: 1, get: () => cropY, set: (v) => { cropY = v; } },
-  { label: "裁切 幅", min: 20, max: 900, step: 1, get: () => cropW, set: (v) => { cropW = v; } },
-  { label: "裁切 高", min: 20, max: 900, step: 1, get: () => cropH, set: (v) => { cropH = v; } },
+  { label: "最終円マスク内側幅", min: 0, max: 80, step: 1, get: () => finalCircleMaskInset, set: (v) => { finalCircleMaskInset = v; } },
+  { label: "切り抜き X", min: -450, max: 450, step: 1, get: () => cropX, set: (v) => { cropX = v; } },
+  { label: "切り抜き Y", min: -450, max: 450, step: 1, get: () => cropY, set: (v) => { cropY = v; } },
+  { label: "切り抜き幅", min: 20, max: 900, step: 1, get: () => cropW, set: (v) => { cropW = v; } },
+  { label: "切り抜き高さ", min: 20, max: 900, step: 1, get: () => cropH, set: (v) => { cropH = v; } },
 
   { type: "section", label: "文字" },
   { label: "文字半径", min: 120, max: 390, step: 1, get: () => textRadius, set: (v) => { textRadius = v; } },
-  { label: "文字圆周位置", min: 0, max: TWO_PI, step: 0.01, get: () => textArcAngle, set: (v) => { textArcAngle = v; } },
-  { label: "文字 Y", min: -160, max: 160, step: 1, get: () => textYOffset, set: (v) => { textYOffset = v; } },
+  { label: "文字の円周位置", min: 0, max: TWO_PI, step: 0.01, get: () => textArcAngle, set: (v) => { textArcAngle = v; } },
+  { label: "文字Y位置", aliases: ["文字 Y"], min: -160, max: 160, step: 1, get: () => textYOffset, set: (v) => { textYOffset = v; } },
   { label: "文字サイズ", min: 8, max: 96, step: 1, get: () => textFontSize, set: (v) => { textFontSize = v; } },
-  { label: "文字字重", min: 100, max: 900, step: 10, get: () => textFontWeight, set: (v) => { textFontWeight = Math.round(v / 10) * 10; } },
-  { label: "文字字重呼吸", min: 0, max: 220, step: 5, get: () => textFontWeightBreath, set: (v) => { textFontWeightBreath = v; } },
-  { label: "文字字间距", min: -10, max: 40, step: 0.5, get: () => textLetterSpacing, set: (v) => { textLetterSpacing = v; } },
-  { label: "sugar-n间距", min: -20, max: 80, step: 0.5, get: () => nGap, set: (v) => { nGap = v; } },
+  { label: "文字ウェイト", min: 100, max: 900, step: 10, get: () => textFontWeight, set: (v) => { textFontWeight = Math.round(v / 10) * 10; } },
+  { label: "文字ウェイト呼吸", min: 0, max: 220, step: 5, get: () => textFontWeightBreath, set: (v) => { textFontWeightBreath = v; } },
+  { label: "文字間隔", min: -10, max: 40, step: 0.5, get: () => textLetterSpacing, set: (v) => { textLetterSpacing = v; } },
+  { label: "sugar-n間隔", min: -20, max: 80, step: 0.5, get: () => nGap, set: (v) => { nGap = v; } },
   { label: "文字半径呼吸", min: 0, max: 12, step: 0.1, get: () => textRadiusBreath, set: (v) => { textRadiusBreath = v; } },
-  { label: "文字字距呼吸", min: 0, max: 3, step: 0.05, get: () => textLetterSpacingBreath, set: (v) => { textLetterSpacingBreath = v; } },
+  { label: "文字間隔呼吸", min: 0, max: 3, step: 0.05, get: () => textLetterSpacingBreath, set: (v) => { textLetterSpacingBreath = v; } },
   { label: "文字呼吸速度", min: 0, max: 6, step: 0.01, get: () => textBreathSpeed, set: (v) => { textBreathSpeed = v; } },
-  { label: "文字灰度", min: 0, max: 255, step: 1, get: () => textGray, set: (v) => { textGray = v; } },
-  { label: "文字展开延迟", min: 0, max: 5, step: 0.1, get: () => textIntroDelay, set: (v) => { textIntroDelay = v; } },
-  { label: "文字展开时长", min: 0.2, max: 12, step: 0.1, get: () => textIntroDuration, set: (v) => { textIntroDuration = v; } },
-  { label: "n扩展时长", min: 0.2, max: 8, step: 0.1, get: () => nBurstDuration, set: (v) => { nBurstDuration = v; } },
-  { label: "n停留时间", min: 0, max: 8, step: 0.1, get: () => nHoldDuration, set: (v) => { nHoldDuration = v; } },
-  { label: "n回收开始", min: 0.1, max: 0.95, step: 0.01, get: () => nRetractStart, set: (v) => { nRetractStart = v; } },
-  { label: "n内容变化速度", min: 0, max: 24, step: 0.1, get: () => nContentChangeSpeed, set: (v) => { nContentChangeSpeed = v; } },
-  { label: "n算式固定时间", min: 0, max: 12, step: 0.1, get: () => nFormulaSettleTime, set: (v) => { nFormulaSettleTime = v; } },
-  { label: "n触发最短间隔", min: 0.2, max: 20, step: 0.1, get: () => nBurstMinDelay, set: (v) => { nBurstMinDelay = v; } },
-  { label: "n触发最长间隔", min: 0.2, max: 30, step: 0.1, get: () => nBurstMaxDelay, set: (v) => { nBurstMaxDelay = v; } },
-  { label: "n扩展半径偏移", min: -120, max: 120, step: 1, get: () => nExpansionRadiusOffset, set: (v) => { nExpansionRadiusOffset = v; } },
-  { label: "n扩展弧长", min: 0.2, max: TWO_PI, step: 0.01, get: () => nExpansionArc, set: (v) => { nExpansionArc = v; } },
-  { label: "n字重", min: 100, max: 900, step: 10, get: () => nFontWeight, set: (v) => { nFontWeight = Math.round(v / 10) * 10; } },
-  { label: "n字重呼吸", min: 0, max: 220, step: 5, get: () => nFontWeightBreath, set: (v) => { nFontWeightBreath = v; } },
-  { label: "n字号", min: 4, max: 40, step: 1, get: () => nRingSize, set: (v) => { nRingSize = v; } },
-  { label: "n扩展字间距", min: -4, max: 60, step: 0.5, get: () => nRingLetterSpacing, set: (v) => { nRingLetterSpacing = v; } },
-  { label: "n扩展数量", min: 1, max: 32, step: 1, get: () => nRingCount, set: (v) => { nRingCount = Math.round(v); } },
-  { label: "n扩展内容", min: 0, max: 2, step: 1, get: () => nRingContentMode, set: (v) => { nRingContentMode = Math.round(v); } },
+  { label: "文字グレー", min: 0, max: 255, step: 1, get: () => textGray, set: (v) => { textGray = v; } },
+  { label: "文字展開遅延", min: 0, max: 5, step: 0.1, get: () => textIntroDelay, set: (v) => { textIntroDelay = v; } },
+  { label: "文字展開時間", min: 0.2, max: 12, step: 0.1, get: () => textIntroDuration, set: (v) => { textIntroDuration = v; } },
+  { label: "n展開時間", min: 0.2, max: 8, step: 0.1, get: () => nBurstDuration, set: (v) => { nBurstDuration = v; } },
+  { label: "n保持時間", min: 0, max: 8, step: 0.1, get: () => nHoldDuration, set: (v) => { nHoldDuration = v; } },
+  { label: "n回収開始", min: 0.1, max: 0.95, step: 0.01, get: () => nRetractStart, set: (v) => { nRetractStart = v; } },
+  { label: "n文字変化速度", min: 0, max: 24, step: 0.1, get: () => nContentChangeSpeed, set: (v) => { nContentChangeSpeed = v; } },
+  { label: "n数式確定時間", min: 0, max: 12, step: 0.1, get: () => nFormulaSettleTime, set: (v) => { nFormulaSettleTime = v; } },
+  { label: "n起動最短間隔", min: 0.2, max: 20, step: 0.1, get: () => nBurstMinDelay, set: (v) => { nBurstMinDelay = v; } },
+  { label: "n起動最長間隔", min: 0.2, max: 30, step: 0.1, get: () => nBurstMaxDelay, set: (v) => { nBurstMaxDelay = v; } },
+  { label: "n展開半径オフセット", min: -120, max: 120, step: 1, get: () => nExpansionRadiusOffset, set: (v) => { nExpansionRadiusOffset = v; } },
+  { label: "n展開弧長", min: 0.2, max: TWO_PI, step: 0.01, get: () => nExpansionArc, set: (v) => { nExpansionArc = v; } },
+  { label: "nウェイト", min: 100, max: 900, step: 10, get: () => nFontWeight, set: (v) => { nFontWeight = Math.round(v / 10) * 10; } },
+  { label: "nウェイト呼吸", min: 0, max: 220, step: 5, get: () => nFontWeightBreath, set: (v) => { nFontWeightBreath = v; } },
+  { label: "nサイズ", min: 4, max: 40, step: 1, get: () => nRingSize, set: (v) => { nRingSize = v; } },
+  { label: "n展開文字間隔", min: -4, max: 60, step: 0.5, get: () => nRingLetterSpacing, set: (v) => { nRingLetterSpacing = v; } },
+  { label: "n展開数", min: 1, max: 32, step: 1, get: () => nRingCount, set: (v) => { nRingCount = Math.round(v); } },
+  { label: "n展開内容タイプ", min: 0, max: 2, step: 1, get: () => nRingContentMode, set: (v) => { nRingContentMode = Math.round(v); } },
 
-  { label: "デブリサイズ 最小", min: 20, max: 420, step: 1, reset: true, get: () => debrisSizeMin, set: (v) => { debrisSizeMin = v; } },
-  { label: "デブリサイズ 最大", min: 20, max: 520, step: 1, reset: true, get: () => debrisSizeMax, set: (v) => { debrisSizeMax = v; } },
+  { label: "デブリ最小サイズ", min: 20, max: 420, step: 1, reset: true, get: () => debrisSizeMin, set: (v) => { debrisSizeMin = v; } },
+  { label: "デブリ最大サイズ", min: 20, max: 520, step: 1, reset: true, get: () => debrisSizeMax, set: (v) => { debrisSizeMax = v; } },
   { label: "デブリ数", min: 1, max: 48, step: 1, reset: true, get: () => debrisCount, set: (v) => { debrisCount = Math.round(v); } },
   { label: "シード", min: 1, max: 999999, step: 1, reset: true, get: () => seedValue, set: (v) => { seedValue = Math.round(v); } },
 ];
@@ -1365,7 +1366,7 @@ document.getElementById("copyDataButton").addEventListener("click", async () => 
   const button = document.getElementById("copyDataButton");
   button.textContent = "コピー済み";
   window.setTimeout(() => {
-    button.textContent = "データコピー";
+    button.textContent = "データをコピー";
   }, 900);
 });
 

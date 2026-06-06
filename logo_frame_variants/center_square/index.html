@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>S^n ノイズ曲線ウェブ</title>
+    <title>S^n ノイズ曲線 Web</title>
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
@@ -14,12 +14,12 @@
           <button id="pauseButton" type="button">一時停止</button>
           <button id="resetButton" type="button">再生成</button>
           <button id="cropButton" type="button">円形</button>
-          <button id="saveButton" type="button">PNG保存</button>
+          <button id="saveButton" type="button">PNGを保存</button>
         </nav>
       </section>
       <aside class="panel" aria-label="パラメータ">
         <nav class="data-actions" aria-label="データ操作">
-          <button id="copyDataButton" type="button">データコピー</button>
+          <button id="copyDataButton" type="button">データをコピー</button>
           <button id="initButton" type="button">初期化</button>
           <button id="exportButton" type="button">保存</button>
         </nav>
@@ -30,13 +30,13 @@
           <div id="formulaStatus" class="formula-status">式は有効です</div>
         </div>
         <div class="formula-editor">
-          <label for="nFormulaList">n算式列表</label>
+          <label for="nFormulaList">nの数式リスト</label>
           <textarea id="nFormulaList" spellcheck="false"></textarea>
-          <p class="formula-help">一行一个算式；n 展开时会随机选一行并逐字固定。</p>
+          <p class="formula-help">1行に1つの数式を入力します。nの展開時にランダムに1行を選び、文字ごとに確定します。</p>
         </div>
         <div id="parameterPanel" class="parameter-panel"></div>
       </aside>
     </main>
-    <script src="./sketch.js?v=20260606-0335"></script>
+    <script src="./sketch.js?v=20260606-0348"></script>
   </body>
 </html>
