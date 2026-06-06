@@ -111,6 +111,8 @@ let nBurstStartTime = -999;
 let nBurstNextTime = 0.9;
 let nBurstSeed = 19.37;
 let nFormulaIndex = 0;
+let nFormulaListText = defaultNFormulaListText();
+let defaultNFormulaList = nFormulaListText;
 
 let debrisSizeMin = 155;
 let debrisSizeMax = 99;
@@ -1000,7 +1002,7 @@ function nFlickerIndex(i, phaseElapsed, seed, length) {
   return Math.floor(phaseElapsed * speed + phase) % Math.max(1, length);
 }
 
-function nFormulaList() {
+function defaultNFormulaListText() {
   return [
     "(a+b)²=a²+2ab+b²+0·x",
     "eⁱˣ=cosx+i·sinx+0·πx",
@@ -1012,7 +1014,15 @@ function nFormulaList() {
     "∑₁ⁿk=n(n+1)/2+0·k²+0",
     "P(A∩B)=P(A)P(B|A)+0·1",
     "x=(-b±√(b²-4ac))/2a±0",
-  ];
+  ].join("\n");
+}
+
+function nFormulaList() {
+  const lines = nFormulaListText
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  return lines.length ? lines : defaultNFormulaListText().split(/\r?\n/);
 }
 
 function nFormulaContent() {
@@ -1064,6 +1074,7 @@ function currentSettingsText() {
     name: "S^n ノイズ曲線 設定",
     exportedAt: new Date().toISOString(),
     curveFormula: curveFormulaText,
+    nFormulaList: nFormulaListText,
     cropMode: useHexCrop ? "六角形" : "円形",
     cropVariant: frameVariant,
     cropRect: { x: cropX, y: cropY, width: cropW, height: cropH },
@@ -1079,6 +1090,10 @@ function applySettingsData(data) {
   if (typeof data.curveFormula === "string") {
     curveFormulaText = data.curveFormula;
     defaultCurveFormula = data.curveFormula;
+  }
+  if (typeof data.nFormulaList === "string") {
+    nFormulaListText = data.nFormulaList;
+    defaultNFormulaList = data.nFormulaList;
   }
   if (Number.isFinite(data.time)) {
     t = data.time;
@@ -1114,6 +1129,7 @@ function saveCurrentAsDefault() {
   }
 
   defaultCurveFormula = curveFormulaText;
+  defaultNFormulaList = nFormulaListText;
   defaultTime = t;
   for (const param of editableParameters()) param.defaultValue = param.get();
 
@@ -1142,8 +1158,11 @@ async function copySettingsData() {
 
 function resetSettingsToDefault() {
   curveFormulaText = defaultCurveFormula;
+  nFormulaListText = defaultNFormulaList;
   const curveInput = document.getElementById("curveFormula");
   curveInput.value = curveFormulaText;
+  const nFormulaInput = document.getElementById("nFormulaList");
+  nFormulaInput.value = nFormulaListText;
   curveFormulaFn = compileFormula(curveFormulaText);
   document.getElementById("formulaStatus").textContent = "式は有効です";
   document.getElementById("formulaStatus").style.color = "#666";
@@ -1233,9 +1252,11 @@ function formatParamValue(value, step) {
 
 function initFormulaEditor() {
   const curveInput = document.getElementById("curveFormula");
+  const nFormulaInput = document.getElementById("nFormulaList");
   const status = document.getElementById("formulaStatus");
 
   curveInput.value = curveFormulaText;
+  nFormulaInput.value = nFormulaListText;
 
   const compile = () => {
     try {
@@ -1250,6 +1271,10 @@ function initFormulaEditor() {
   };
 
   curveInput.addEventListener("input", compile);
+  nFormulaInput.addEventListener("input", () => {
+    nFormulaListText = nFormulaInput.value;
+    nFormulaIndex = Math.min(nFormulaIndex, Math.max(0, nFormulaList().length - 1));
+  });
   compile();
 }
 
