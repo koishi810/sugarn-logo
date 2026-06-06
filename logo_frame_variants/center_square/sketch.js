@@ -1002,16 +1002,16 @@ function nFlickerIndex(i, phaseElapsed, seed, length) {
 
 function nFormulaList() {
   return [
-    "(a+b)²=a²+2ab+b²",
-    "eⁱˣ=cosx+i·sinx",
-    "sinx=x-x³/3!+x⁵/5!",
-    "cosx=1-x²/2!+x⁴/4!",
-    "ln(1+x)=x-x²/2+…",
-    "1/(1-x)=1+x+x²+…",
-    "∫xⁿdx=xⁿ⁺¹/(n+1)",
-    "∑₁ⁿk=n(n+1)/2",
-    "P(A∩B)=P(A)P(B|A)",
-    "x=(-b±√(b²-4ac))/2a",
+    "(a+b)²=a²+2ab+b²+0·x",
+    "eⁱˣ=cosx+i·sinx+0·πx",
+    "sinx=x-x³/3!+x⁵/5!-…",
+    "cosx=1-x²/2!+x⁴/4!-…",
+    "ln(1+x)=x-x²/2+x³/3-…",
+    "1/(1-x)=1+x+x²+x³+…∞",
+    "∫xⁿdx=xⁿ⁺¹/(n+1)+C₀x",
+    "∑₁ⁿk=n(n+1)/2+0·k²+0",
+    "P(A∩B)=P(A)P(B|A)+0·1",
+    "x=(-b±√(b²-4ac))/2a±0",
   ];
 }
 
