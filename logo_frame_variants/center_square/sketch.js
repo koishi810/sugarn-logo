@@ -6,7 +6,16 @@ const ctx = canvas.getContext("2d", { willReadFrequently: true });
 
 const TWO_PI = Math.PI * 2;
 const TIME_WRAP = TWO_PI * 4096;
+const LOGICAL_SIZE = 900;
+const RENDER_SCALE = 3;
 let debris = [];
+
+canvas.width = LOGICAL_SIZE * RENDER_SCALE;
+canvas.height = LOGICAL_SIZE * RENDER_SCALE;
+
+function resetLogicalTransform() {
+  ctx.setTransform(RENDER_SCALE, 0, 0, RENDER_SCALE, 0, 0);
+}
 
 // Processing 版と同じ主要パラメータ。
 let logoR = 130;
@@ -333,12 +342,12 @@ function draw(now = performance.now()) {
     for (const d of debris) d.update(frameStep);
   }
 
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  resetLogicalTransform();
   ctx.globalCompositeOperation = "source-over";
   ctx.fillStyle = "#fff";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillRect(0, 0, LOGICAL_SIZE, LOGICAL_SIZE);
 
-  ctx.translate(canvas.width / 2, canvas.height / 2);
+  ctx.translate(LOGICAL_SIZE / 2, LOGICAL_SIZE / 2);
   const currentLogoRotation = logoRotation + mapValue(loopingNoise2(302.4, 801.9, t * logoRandomRotationSpeed), 0, 1, -logoRandomRotationAmount, logoRandomRotationAmount);
 
   ctx.save();
@@ -352,7 +361,8 @@ function draw(now = performance.now()) {
   updateBlackPixelScale(frameStep);
   drawLogoFrameVariant(currentLogoRotation);
 
-  ctx.setTransform(1, 0, 0, 1, canvas.width / 2, canvas.height / 2);
+  resetLogicalTransform();
+  ctx.translate(LOGICAL_SIZE / 2, LOGICAL_SIZE / 2);
   drawLogoText();
 
   requestAnimationFrame(draw);
@@ -370,7 +380,7 @@ function drawKaleidoscopeDebris() {
 }
 
 function drawClippedHalfSector() {
-  const r = canvas.width;
+  const r = LOGICAL_SIZE;
   const a0 = -sectorOverlap;
   const a1 = Math.PI / 6 + sectorOverlap;
   ctx.save();
@@ -465,17 +475,19 @@ function distanceToOuterBoundary(x, y) {
 function updateBlackPixelScale(frameStep) {
   const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
   const data = image.data;
+  const sampleStep = Math.max(1, Math.floor(RENDER_SCALE));
+  const sampleArea = sampleStep * sampleStep;
   let blackArea = 0;
   let minX = canvas.width;
   let minY = canvas.height;
   let maxX = -1;
   let maxY = -1;
 
-  for (let y = 0; y < canvas.height; y++) {
-    for (let x = 0; x < canvas.width; x++) {
+  for (let y = 0; y < canvas.height; y += sampleStep) {
+    for (let x = 0; x < canvas.width; x += sampleStep) {
       const i = (y * canvas.width + x) * 4;
       if (data[i] < blackPixelThreshold && data[i + 1] < blackPixelThreshold && data[i + 2] < blackPixelThreshold) {
-        blackArea++;
+        blackArea += sampleArea;
         if (x < minX) minX = x;
         if (x > maxX) maxX = x;
         if (y < minY) minY = y;
@@ -694,7 +706,7 @@ function drawOuterMask() {
     return;
   }
 
-  const m = canvas.width;
+  const m = LOGICAL_SIZE;
   ctx.beginPath();
   ctx.rect(-m, -m, m * 2, m * 2);
   ctx.moveTo(Math.cos((TWO_PI * 5) / 6) * logoR, Math.sin((TWO_PI * 5) / 6) * logoR);
@@ -710,9 +722,9 @@ function drawOuterMask() {
 function drawCircleOutsideMask() {
   ctx.save();
   ctx.strokeStyle = "#fff";
-  ctx.lineWidth = canvas.width;
+  ctx.lineWidth = LOGICAL_SIZE;
   ctx.beginPath();
-  ctx.arc(0, 0, logoR + canvas.width / 2, 0, TWO_PI);
+  ctx.arc(0, 0, logoR + LOGICAL_SIZE / 2, 0, TWO_PI);
   ctx.stroke();
   ctx.restore();
 }
@@ -720,9 +732,9 @@ function drawCircleOutsideMask() {
 function drawFinalCircleCleanupMask() {
   ctx.save();
   ctx.strokeStyle = "#fff";
-  ctx.lineWidth = canvas.width;
+  ctx.lineWidth = LOGICAL_SIZE;
   ctx.beginPath();
-  ctx.arc(0, 0, logoR - finalCircleMaskInset + canvas.width / 2, 0, TWO_PI);
+  ctx.arc(0, 0, logoR - finalCircleMaskInset + LOGICAL_SIZE / 2, 0, TWO_PI);
   ctx.stroke();
   ctx.restore();
 }
@@ -735,7 +747,7 @@ function drawLogoFrameVariant(currentLogoRotation) {
 }
 
 function drawOutsideRectMask(x, y, w, h) {
-  const m = canvas.width;
+  const m = LOGICAL_SIZE;
   ctx.save();
   ctx.fillStyle = "#fff";
   ctx.beginPath();
