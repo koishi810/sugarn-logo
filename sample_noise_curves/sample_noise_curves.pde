@@ -14,21 +14,22 @@ ArrayList<Debris> debris = new ArrayList<Debris>();
 
 // logoR は最終ロゴの外形サイズを制御する。
 // 現在は 150 に調整している。この値は外形とデブリの循環範囲の両方に影響する。
-float logoR = 150;
+float logoR = 180;
 
 // グローバル時間。draw() が毎フレーム加算し、ノイズと波形の流れを駆動する。
-float t = 0;
+float t = 130.81183100001516;
 boolean paused = false;
 boolean useHexCrop = false;
+float sectorOverlap = 0.035;
 
 // フレーム数ではなく実時間でアニメーションを進める。
 // 処理が重くなって FPS が落ちても、後半だけ動きが遅く見えるのを避ける。
 int lastFrameMillis = 0;
-float baseTimeStep = 0.003;
-float maxFrameStep = 2.5;
+float baseTimeStep = 0.0047;
+float maxFrameStep = 3.95;
 
 // ロゴ全体の向き。PI / 6 で六角形の尖った角が上下に来る。
-float logoRotation = PI / 6.0;
+float logoRotation = 0;
 
 // 黒いピクセル量を固定するための全体スケール補正。
 // 初回の黒ピクセル面積を基準にして、見た目の重量が大きく揺れないようにする。
@@ -40,7 +41,7 @@ float blackPixelScaleMaxVelocity = 0.012;
 float blackPixelScaleMin = 1;
 float blackPixelScaleMax = 1;
 float blackPixelThreshold = 80;
-float blackPixelScaleDeadZone = 0.006;
+float blackPixelScaleDeadZone = 0.003;
 float blackPixelTargetSmoothing = 0.08;
 // 黒量が一時的に増えた時でも、目標スケールを急に小さくしすぎないための下限。
 float blackPixelMaxShrinkTarget = 0.985;
@@ -54,8 +55,8 @@ float blackPixelBoundsWeight = 0.45;
 // 白いセルの角丸量の変化範囲。時間と noise でゆっくり揺らす。
 // min/max を近づけるほど安定し、離すほど角丸の変化が大きくなる。
 float cellCornerRoundnessMin = 0;
-float cellCornerRoundnessMax = 2;
-float cellCornerRoundnessSpeed = 0.045;
+float cellCornerRoundnessMax = 20;
+float cellCornerRoundnessSpeed = 0.111;
 
 // 融球感の強さ。0.0 で無効、値を上げるほど白い塊が外へ膨らんでつながりやすくなる。
 float cellMeltAmountMin = 0;
@@ -65,13 +66,13 @@ float cellMeltAmountSpeed = 0.012;
 // エッジのたるみ量。値を上げるほど白い塊の辺が内側へ柔らかくへこむ。
 float cellEdgeSlackMin = 0;
 float cellEdgeSlackMax = 0;
-float cellEdgeSlackSpeed = 0.030;
+float cellEdgeSlackSpeed = 0.105;
 
 // 線生成アルゴリズム自体のランダム性。周波数/角度/半径を noise でゆっくり変える。
-float lineFrequencyRandomness = 0.55;
-float lineAngleRandomness = 0.12;
-float lineRadiusRandomness = 0.18;
-float lineRandomnessSpeed = 0.010;
+float lineFrequencyRandomness = 1.59;
+float lineAngleRandomness = 0.65;
+float lineRadiusRandomness = 0.47;
+float lineRandomnessSpeed = 0.049;
 
 // 各セルごとの局所サイズ変化。min/max を離すほど同じデブリ内でも白い塊の大小差が出る。
 float cellLocalScaleMin = 1;
@@ -92,7 +93,8 @@ float debrisSizeMin = 230;
 float debrisSizeMax = 260;
 
 // seed でランダム結果を固定する。R を押すと seed が変わり、別バージョンのロゴを生成する。
-int seedValue = 2026;
+int debrisCount = 10;
+int seedValue = 985933;
 
 void setup() {
   size(900, 900, JAVA2D);
@@ -151,7 +153,7 @@ void resetDebris() {
 
   // デブリ数。多いほど密になるが、処理負荷も上がる。
   // 重い場合はまず 24 か 30 を試す。隙間が多い場合は 42 まで上げる。
-  for (int i = 0; i < 16; i++) {
+  for (int i = 0; i < debrisCount; i++) {
     debris.add(new Debris());
   }
 }
@@ -185,34 +187,24 @@ void drawClippedHalfSector() {
   Shape oldClip = g2.getClip();
 
   float r = width;
+  float a0 = -sectorOverlap;
+  float a1 = PI / 6.0 + sectorOverlap;
   Path2D.Float wedge = new Path2D.Float();
   wedge.moveTo(0, 0);
-  wedge.lineTo(r, 0);
-  wedge.lineTo(cos(PI / 6.0) * r, sin(PI / 6.0) * r);
+  wedge.lineTo(cos(a0) * r, sin(a0) * r);
+  wedge.lineTo(cos(a1) * r, sin(a1) * r);
   wedge.closePath();
 
   g2.clip(wedge);
 
-  // 現在のバージョンの重要な方針:
-  // 先に黒いベースを敷き、その上に白いノイズ単位だけを描くことで、黒い多角形同士の継ぎ目に白線が出るのを避ける。
-  drawBlackSectorBase();
   for (Debris d : debris) {
     d.draw();
   }
   g2.setClip(oldClip);
 }
 
-void drawBlackSectorBase() {
-  // 黒いベースは上の wedge clip により、現在の半セクター内だけに制限される。
-  // 最終的な外形は引き続き drawOuterMask() で切り抜く。
-  blendMode(BLEND);
-  noStroke();
-  fill(0);
-  rect(0, -width, width * 1.5, width * 2);
-}
-
 void drawPatternCell(float a0, float a1, float p0, float p1, float k, float phase, float patternSize, float patternSeed, float debrisX, float debrisY, float debrisRot) {
-  // 白いセル形状の入口。
+  // 黒いセル形状の入口。
   // 今後線や形を大きく変える場合は、ここ と patternVertex() を優先して変更する。
   PVector[] pts = {
     patternPoint(a0, p0, k, phase, patternSize, patternSeed),
@@ -573,12 +565,12 @@ class Debris {
         float a0 = TWO_PI * aa / angleSteps;
         float a1 = TWO_PI * (aa + 1) / angleSteps;
 
-        // 白い単位の選択ルール。
-        // % 3 は約3分の1の単位を白にする。% 2 に変えるとより白く、より密になる。
+        // 黒い単位の選択ルール。
+        // % 3 は約3分の1の単位を黒にする。% 2 に変えるとより黒く、より密になる。
         if ((rr + aa + type) % 3 != 0) continue;
 
         noStroke();
-        fill(255);
+        fill(0);
         drawPatternCell(a0, a1, p0, p1, k, phase, size, noiseSeed, x, y, rot);
       }
     }

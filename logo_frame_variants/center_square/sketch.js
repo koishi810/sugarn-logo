@@ -21,6 +21,10 @@ let baseTimeStep = 0.0047;
 let maxFrameStep = 3.95;
 
 let logoRotation = 0;
+let logoRandomRotationAmount = 0;
+let logoRandomRotationSpeed = 0.45;
+let logoGray = 0;
+let logoGrayVariation = 0;
 
 let blackPixelScale = 1.0;
 let blackPixelScaleVelocity = 0.0;
@@ -68,11 +72,52 @@ let cellBoundaryScaleSoftness = 0.68;
 
 let finalCircleMaskInset = 20;
 
+let cropX = -214;
+let cropY = -214;
+let cropW = 428;
+let cropH = 428;
+
+let textRadius = 252;
+let textArcAngle = Math.PI / 2;
+let textYOffset = 0;
+let textFontSize = 30;
+let textFontWeight = 700;
+let textFontWeightBreath = 0;
+let textLetterSpacing = 2;
+let nGap = 5;
+let textRadiusBreath = 5;
+let textLetterSpacingBreath = 1.2;
+let textBreathSpeed = 1.4;
+let textGray = 0;
+let textIntroDelay = 0.8;
+let textIntroDuration = 3.2;
+let nBurstDuration = 2.4;
+let nHoldDuration = 1.2;
+let nBurstMinDelay = 2.2;
+let nBurstMaxDelay = 6.0;
+let nRetractStart = 0.78;
+let nContentChangeSpeed = 18;
+let nFormulaSettleTime = 2.6;
+let nExpansionRadiusOffset = 0;
+let nExpansionArc = TWO_PI;
+let nFontWeight = 700;
+let nFontWeightBreath = 0;
+let nRingSize = 16;
+let nRingLetterSpacing = 12;
+let nRingCount = 24;
+let nRingContentMode = 0;
+const sketchStartTime = performance.now();
+let nBurstStartTime = -999;
+let nBurstNextTime = 0.9;
+let nBurstSeed = 19.37;
+let nFormulaIndex = 0;
+
 let debrisSizeMin = 230;
 let debrisSizeMax = 260;
 let debrisCount = 10;
 let seedValue = 985933;
 let randomState = 1;
+const frameVariant = "centerSquare";
 
 let defaultCurveFormula = `(() => {
   const nt = time * 0.15;
@@ -104,12 +149,23 @@ function constrain(v, min, max) {
   return Math.max(min, Math.min(max, v));
 }
 
+function fract(v) {
+  return v - Math.floor(v);
+}
+
 function lerp(a, b, n) {
   return a + (b - a) * n;
 }
 
 function mapValue(v, a0, a1, b0, b1) {
   return b0 + ((v - a0) / (a1 - a0)) * (b1 - b0);
+}
+
+function logoFillStyle(worldX = 0, worldY = 0) {
+  const centerDistance = Math.sqrt(worldX * worldX + worldY * worldY);
+  const distanceFactor = constrain(centerDistance / Math.max(1, logoR), 0, 1);
+  const g = Math.round(constrain(logoGray + logoGrayVariation * distanceFactor, 0, 255));
+  return `rgb(${g}, ${g}, ${g})`;
 }
 
 function compileFormula(text) {
@@ -201,6 +257,10 @@ function hash3(ix, iy, iz) {
   return ((h ^ (h >>> 16)) >>> 0) / 4294967295;
 }
 
+function hashNumber(n) {
+  return fract(Math.sin(n * 127.1 + 311.7) * 43758.5453123);
+}
+
 function fade(n) {
   return n * n * n * (n * (n * 6 - 15) + 10);
 }
@@ -277,16 +337,21 @@ function draw(now = performance.now()) {
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   ctx.translate(canvas.width / 2, canvas.height / 2);
+  const currentLogoRotation = logoRotation + mapValue(loopingNoise2(302.4, 801.9, t * logoRandomRotationSpeed), 0, 1, -logoRandomRotationAmount, logoRandomRotationAmount);
 
   ctx.save();
   ctx.scale(blackPixelScale, blackPixelScale);
-  ctx.rotate(logoRotation);
+  ctx.rotate(currentLogoRotation);
   drawKaleidoscopeDebris();
   ctx.restore();
 
-  ctx.rotate(logoRotation);
+  ctx.rotate(currentLogoRotation);
   drawOuterMask();
   updateBlackPixelScale(frameStep);
+  drawLogoFrameVariant(currentLogoRotation);
+
+  ctx.setTransform(1, 0, 0, 1, canvas.width / 2, canvas.height / 2);
+  drawLogoText();
 
   requestAnimationFrame(draw);
 }
@@ -327,6 +392,12 @@ function drawPatternCell(a0, a1, p0, p1, k, phase, patternSize, patternSeed, deb
   ];
   scalePatternCell(pts, cellLocalScale(a0, a1, p0, p1, phase, patternSeed));
   scalePatternCell(pts, cellBoundaryScale(pts, debrisX, debrisY, debrisRot, patternSeed));
+  const center = quadCenter(pts);
+  const ca = Math.cos(debrisRot);
+  const sa = Math.sin(debrisRot);
+  const worldX = center.x * ca - center.y * sa + debrisX;
+  const worldY = center.x * sa + center.y * ca + debrisY;
+  ctx.fillStyle = logoFillStyle(worldX, worldY);
   drawRoundedPatternQuad(pts, cellRoundness(patternSeed), cellMeltAmount(patternSeed), cellEdgeSlack(patternSeed), 5, 4);
 }
 
@@ -592,7 +663,6 @@ class Debris {
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.rotate(this.rot);
-    ctx.fillStyle = "#000";
     this.drawRoseGrid(3 + this.type * 2);
     ctx.restore();
   }
@@ -608,7 +678,6 @@ class Debris {
         const a0 = (TWO_PI * aa) / angleSteps;
         const a1 = (TWO_PI * (aa + 1)) / angleSteps;
         if ((rr + aa + this.type) % 3 !== 0) continue;
-        ctx.fillStyle = "#000";
         drawPatternCell(a0, a1, p0, p1, k, phase, this.size, this.noiseSeed, this.x, this.y, this.rot);
       }
     }
@@ -656,6 +725,312 @@ function drawFinalCircleCleanupMask() {
   ctx.restore();
 }
 
+function drawLogoFrameVariant(currentLogoRotation) {
+  ctx.save();
+  ctx.rotate(-currentLogoRotation);
+  drawOutsideRectMask(cropX, cropY, cropW, cropH);
+  ctx.restore();
+}
+
+function drawOutsideRectMask(x, y, w, h) {
+  const m = canvas.width;
+  ctx.save();
+  ctx.fillStyle = "#fff";
+  ctx.beginPath();
+  ctx.rect(-m, -m, m * 2, m * 2);
+  ctx.rect(x, y, w, h);
+  ctx.fill("evenodd");
+  ctx.restore();
+}
+
+function drawLogoText() {
+  const breathPhase = t * textBreathSpeed;
+  const radiusNoise = loopingNoise2(910.17, 26.4, breathPhase);
+  const spacingNoise = loopingNoise2(123.8, 740.31, breathPhase * 1.37 + 1.9);
+  const weightNoise = loopingNoise2(511.61, 92.7, breathPhase * 0.83 + 3.4);
+  const nWeightNoise = loopingNoise2(77.2, 643.5, breathPhase * 0.91 + 5.2);
+  const breathingRadius = textRadius + mapValue(radiusNoise, 0, 1, -textRadiusBreath, textRadiusBreath);
+  const breathingLetterSpacing = textLetterSpacing + mapValue(spacingNoise, 0, 1, -textLetterSpacingBreath, textLetterSpacingBreath);
+  const breathingFontWeight = constrain(textFontWeight + mapValue(weightNoise, 0, 1, -textFontWeightBreath, textFontWeightBreath), 100, 900);
+  const breathingNFontWeight = constrain(nFontWeight + mapValue(nWeightNoise, 0, 1, -nFontWeightBreath, nFontWeightBreath), 100, 900);
+  const elapsed = (performance.now() - sketchStartTime) / 1000;
+  const intro = smoothstep(textIntroDelay, textIntroDelay + Math.max(0.1, textIntroDuration), elapsed);
+  drawSugarTextIntro(intro, breathingRadius, breathingLetterSpacing, breathingFontWeight, breathingNFontWeight);
+}
+
+function drawSugarTextIntro(intro, radius, letterSpacing, fontWeight, nWeight) {
+  ctx.save();
+  setupLogoTextStyle(textFontSize, textFontWeight, textGray);
+  const sWidth = ctx.measureText("s").width;
+  const nWidth = measureLogoTextWidth("n", nRingSize, nFontWeight);
+  setupLogoTextStyle(textFontSize, textFontWeight, textGray);
+  const startAngle = Math.PI / 2;
+  const startBaselineY = radius + textYOffset;
+  const startS = { x: 0, y: startBaselineY, angle: startAngle };
+  const startN = { x: sWidth / 2 + nWidth / 2, y: startBaselineY, angle: startAngle };
+  const insertStart = { x: 0, y: startBaselineY, angle: startAngle };
+  const sugarLayout = arcTextLayout("sugar", textArcAngle, radius, textYOffset, letterSpacing);
+  const finalN = arcTextEndpoint("sugar", textArcAngle, radius, textYOffset, letterSpacing, nGap, nWidth);
+  const nExpansionEnd = arcTextStartpoint("sugar", textArcAngle, radius, textYOffset, letterSpacing, nGap, nWidth);
+  const spread = smoothstep(0.04, 0.88, intro);
+  const nAnchor = {
+    x: lerp(startN.x, finalN.x, spread),
+    y: lerp(startN.y, finalN.y, spread),
+    angle: lerpAngle(startN.angle, finalN.angle, spread),
+  };
+
+  setupLogoTextStyle(textFontSize, fontWeight, textGray);
+  for (let i = 0; i < sugarLayout.length; i++) {
+    const letterMove = i === 0 ? spread : smoothstep(0.14 + i * 0.075, 0.56 + i * 0.06, intro);
+    const letterAlpha = i === 0 ? 1 : letterMove;
+    const from = i === 0 ? startS : insertStart;
+    const p = sugarLayout[i];
+    drawArcLetter(sugarLayout[i].char, {
+      x: lerp(from.x, p.x, letterMove),
+      y: lerp(from.y, p.y, letterMove),
+      angle: lerpAngle(from.angle, p.angle, letterMove),
+    }, letterAlpha, i === 0 ? 1 : lerp(0.72, 1, letterMove));
+  }
+  ctx.restore();
+
+  const superscript = superscriptPoint(nAnchor);
+  const nExpansionActive = intro >= 1 && drawNExpansion(superscript, nExpansionEnd, radius, nWeight);
+
+  if (!nExpansionActive) {
+    ctx.save();
+    setupLogoTextStyle(nRingSize, nWeight, textGray);
+    drawArcLetter("n", superscript, 1);
+    ctx.restore();
+  }
+}
+
+function drawArcText(text, centerAngle, radius, yOffset, letterSpacing) {
+  const layout = arcTextLayout(text, centerAngle, radius, yOffset, letterSpacing);
+  ctx.save();
+  setupLogoTextStyle(textFontSize, textFontWeight, textGray);
+  for (const item of layout) drawArcLetter(item.char, item, 1);
+  ctx.restore();
+}
+
+function setupLogoTextStyle(fontSize, fontWeight, gray) {
+  ctx.fillStyle = `rgb(${gray}, ${gray}, ${gray})`;
+  ctx.font = `${Math.round(fontWeight)} ${fontSize}px "Source Han Sans VF", "Source Han Sans SC", "Source Han Sans CN", "Source Han Sans JP", "Noto Sans CJK SC", "Noto Sans CJK JP", "思源黑体", "Hiragino Sans", sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+}
+
+function measureLogoTextWidth(text, fontSize, fontWeight) {
+  ctx.save();
+  setupLogoTextStyle(fontSize, fontWeight, textGray);
+  const width = ctx.measureText(text).width;
+  ctx.restore();
+  return width;
+}
+
+function arcPoint(angle, radius, yOffset) {
+  const r = Math.max(1, radius);
+  return {
+    x: Math.cos(angle) * r,
+    y: Math.sin(angle) * r + yOffset,
+    angle,
+  };
+}
+
+function arcTextLayout(text, centerAngle, radius, yOffset, letterSpacing) {
+  const r = Math.max(1, radius);
+  const chars = Array.from(text);
+  const widths = chars.map((char) => ctx.measureText(char).width);
+  const spacing = letterSpacing || 0;
+  const totalWidth = widths.reduce((sum, width) => sum + width, 0) + spacing * Math.max(0, chars.length - 1);
+  let cursor = -totalWidth / 2;
+  const layout = [];
+
+  for (let i = 0; i < chars.length; i++) {
+    const advance = widths[i] + (i < chars.length - 1 ? spacing : 0);
+    const angle = centerAngle - (cursor + widths[i] / 2) / r;
+    const x = Math.cos(angle) * r;
+    const y = Math.sin(angle) * r + yOffset;
+    layout.push({ char: chars[i], x, y, angle });
+    cursor += advance;
+  }
+
+  return layout;
+}
+
+function arcTextEndpoint(text, centerAngle, radius, yOffset, letterSpacing, gap, nextWidth = 0) {
+  const r = Math.max(1, radius);
+  const chars = Array.from(text);
+  const widths = chars.map((char) => ctx.measureText(char).width);
+  const spacing = letterSpacing || 0;
+  const totalWidth = widths.reduce((sum, width) => sum + width, 0) + spacing * Math.max(0, chars.length - 1);
+  const angle = centerAngle - (totalWidth / 2 + gap + nextWidth / 2) / r;
+  return {
+    x: Math.cos(angle) * r,
+    y: Math.sin(angle) * r + yOffset,
+    angle,
+  };
+}
+
+function arcTextStartpoint(text, centerAngle, radius, yOffset, letterSpacing, gap, prevWidth = 0) {
+  const r = Math.max(1, radius);
+  const chars = Array.from(text);
+  const widths = chars.map((char) => ctx.measureText(char).width);
+  const spacing = letterSpacing || 0;
+  const totalWidth = widths.reduce((sum, width) => sum + width, 0) + spacing * Math.max(0, chars.length - 1);
+  const angle = centerAngle + (totalWidth / 2 + gap + prevWidth / 2) / r;
+  return {
+    x: Math.cos(angle) * r,
+    y: Math.sin(angle) * r + yOffset,
+    angle,
+  };
+}
+
+function drawArcLetter(char, item, alpha, scale = 1) {
+  if (alpha <= 0.001) return;
+  ctx.save();
+  ctx.globalAlpha *= constrain(alpha, 0, 1);
+  ctx.translate(item.x, item.y);
+  ctx.rotate(item.angle - Math.PI / 2);
+  ctx.scale(scale, scale);
+  ctx.fillText(char, 0, 0);
+  ctx.restore();
+}
+
+function superscriptPoint(anchor) {
+  const superscriptOffset = textFontSize * 0.34;
+  return {
+    x: anchor.x - Math.cos(anchor.angle) * superscriptOffset,
+    y: anchor.y - Math.sin(anchor.angle) * superscriptOffset,
+    angle: anchor.angle,
+  };
+}
+
+function drawNExpansion(start, end, baseRingRadius, nWeight) {
+  updateNBurstTiming();
+  const elapsed = (performance.now() - sketchStartTime) / 1000;
+  const phaseElapsed = elapsed - nBurstStartTime;
+  const totalDuration = nExpansionTotalDuration();
+  if (phaseElapsed <= 0 || phaseElapsed >= totalDuration) return false;
+  const animationDuration = Math.max(0.1, nBurstDuration);
+  const settleTime = Math.max(0, nFormulaSettleTime);
+  const holdTime = Math.max(0, nHoldDuration);
+  const retractDuration = Math.max(0.001, animationDuration * (1 - nRetractStart));
+  const retractElapsed = phaseElapsed - settleTime - holdTime;
+  const progress = phaseElapsed <= settleTime
+    ? (phaseElapsed / Math.max(0.001, settleTime)) * nRetractStart
+    : retractElapsed <= 0
+      ? nRetractStart
+      : nRetractStart + (retractElapsed / retractDuration) * (1 - nRetractStart);
+  if (progress <= 0 || progress >= 1) return false;
+  drawNExpansionAtProgress(start, end, baseRingRadius, progress, phaseElapsed, nBurstSeed, nWeight);
+  return true;
+}
+
+function drawNExpansionAtProgress(start, end, baseRingRadius, progress, phaseElapsed, burstSeed, nWeight) {
+  const chars = nFlickerContent();
+  const formulaChars = nFormulaContent();
+  const count = Math.max(1, Math.min(Math.round(nRingCount), formulaChars.length));
+  const ringRadius = Math.max(1, Math.hypot(start.x, start.y) + nExpansionRadiusOffset);
+  const startAngle = Math.atan2(start.y, start.x);
+  const endAngle = Math.atan2(end.y, end.x);
+  const availableArc = clockwiseArcDistance(startAngle, endAngle);
+  const naturalArc = Math.max(0, nRingSize + nRingLetterSpacing) / Math.max(1, ringRadius);
+  const fittedArc = Math.min(nExpansionArc, availableArc) / Math.max(1, count - 1);
+  const arcStep = Math.min(naturalArc, fittedArc);
+
+  ctx.save();
+  setupLogoTextStyle(nRingSize, nWeight, textGray);
+  for (let i = 0; i < count; i++) {
+    const appearWindow = Math.max(0.08, nRetractStart);
+    const appearProgress = constrain(progress / appearWindow, 0, 1);
+    const appear = smoothstep(0, 1, appearProgress * (count + 1) - i);
+    const retractProgress = constrain((progress - nRetractStart) / Math.max(0.001, 1 - nRetractStart), 0, 1);
+    const retract = 1 - smoothstep(0, 1, retractProgress * (count + 1) - (count - 1 - i));
+    const alpha = appear * retract;
+    if (alpha <= 0.001) continue;
+    const a = startAngle - arcStep * i;
+    const settleStart = nFormulaSettleTime * 0.35;
+    const settleSpan = Math.max(0.001, nFormulaSettleTime * 0.65);
+    const charSettleTime = settleStart + settleSpan * (i / Math.max(1, count - 1));
+    const charSettled = phaseElapsed >= charSettleTime;
+    const char = charSettled
+      ? formulaChars[i]
+      : chars[nFlickerIndex(i, phaseElapsed, burstSeed, chars.length)];
+    const target = {
+      x: Math.cos(a) * ringRadius,
+      y: Math.sin(a) * ringRadius,
+      angle: a,
+    };
+    drawArcLetter(char, target, alpha);
+  }
+  ctx.restore();
+}
+
+function updateNBurstTiming() {
+  const elapsed = (performance.now() - sketchStartTime) / 1000;
+  const totalDuration = nExpansionTotalDuration();
+  if (elapsed < nBurstNextTime || elapsed - nBurstStartTime < totalDuration) return;
+  nBurstStartTime = elapsed;
+  nBurstSeed = Math.random() * 10000;
+  nFormulaIndex = Math.floor(Math.random() * nFormulaList().length);
+  const minDelay = Math.min(nBurstMinDelay, nBurstMaxDelay);
+  const maxDelay = Math.max(nBurstMinDelay, nBurstMaxDelay);
+  nBurstNextTime = elapsed + totalDuration + minDelay + Math.random() * (maxDelay - minDelay);
+}
+
+function nExpansionTotalDuration() {
+  const retractDuration = Math.max(0.1, nBurstDuration) * (1 - nRetractStart);
+  return Math.max(0, nFormulaSettleTime) + Math.max(0, nHoldDuration) + Math.max(0.001, retractDuration);
+}
+
+function nRingContent() {
+  const mode = Math.round(nRingContentMode);
+  if (mode === 1) return Array.from("n+1=n²");
+  if (mode === 2) return Array.from("∴∵∞∑∫≈≠◆◇");
+  return Array.from("1234567890");
+}
+
+function nFlickerContent() {
+  return Array.from("0123456789+-=×÷√∑∫∞πⁿᵐᵏˣ₀₁₂₃₄₅₆₇₈₉()");
+}
+
+function nFlickerIndex(i, phaseElapsed, seed, length) {
+  const speed = nContentChangeSpeed * (0.45 + hashNumber(seed + i * 17.37) * 1.3);
+  const phase = hashNumber(seed * 0.13 + i * 91.9) * 1000;
+  return Math.floor(phaseElapsed * speed + phase) % Math.max(1, length);
+}
+
+function nFormulaList() {
+  return [
+    "(x+y)²=x²+2xy+y²",
+    "eⁱˣ=cos(x)+i·sin(x)",
+    "eˣ=1+x+x²/2!+…",
+    "1/(1-x)=1+x+x²+…",
+    "sin(x)=x-x³/3!+…",
+    "cos(x)=1-x²/2!+…",
+    "aⁿ·aᵐ=aⁿ⁺ᵐ",
+    "∫₀¹xⁿdx=1/(n+1)",
+    "φ=(1+√5)/2",
+    "eⁱπ+1=0",
+  ];
+}
+
+function nFormulaContent() {
+  const formulas = nFormulaList();
+  const index = ((nFormulaIndex % formulas.length) + formulas.length) % formulas.length;
+  return Array.from(formulas[index]);
+}
+
+function lerpAngle(a, b, n) {
+  let delta = ((b - a + Math.PI) % TWO_PI) - Math.PI;
+  if (delta < -Math.PI) delta += TWO_PI;
+  return a + delta * n;
+}
+
+function clockwiseArcDistance(fromAngle, toAngle) {
+  return (fromAngle - toAngle + TWO_PI) % TWO_PI;
+}
+
 function savePng() {
   const a = document.createElement("a");
   a.download = `noise_curves_logo_${String(Math.floor(performance.now())).padStart(4, "0")}.png`;
@@ -690,9 +1065,11 @@ function currentSettingsText() {
     exportedAt: new Date().toISOString(),
     curveFormula: curveFormulaText,
     cropMode: useHexCrop ? "六角形" : "円形",
+    cropVariant: frameVariant,
+    cropRect: { x: cropX, y: cropY, width: cropW, height: cropH },
     paused,
     time: t,
-    parameters: Object.fromEntries(parameters.map((param) => [parameterKey(param.label), param.get()])),
+    parameters: Object.fromEntries(editableParameters().map((param) => [parameterKey(param.label), param.get()])),
   };
   return JSON.stringify(data, null, 2);
 }
@@ -711,7 +1088,7 @@ function applySettingsData(data) {
   if (typeof data.paused === "boolean") paused = data.paused;
 
   const values = data.parameters && typeof data.parameters === "object" ? data.parameters : {};
-  for (const param of parameters) {
+  for (const param of editableParameters()) {
     const key = parameterKey(param.label);
     if (!(key in values)) continue;
     const next = Number(values[key]);
@@ -738,7 +1115,7 @@ function saveCurrentAsDefault() {
 
   defaultCurveFormula = curveFormulaText;
   defaultTime = t;
-  for (const param of parameters) param.defaultValue = param.get();
+  for (const param of editableParameters()) param.defaultValue = param.get();
 
   const button = document.getElementById("exportButton");
   button.textContent = "保存済み";
@@ -771,7 +1148,7 @@ function resetSettingsToDefault() {
   document.getElementById("formulaStatus").textContent = "式は有効です";
   document.getElementById("formulaStatus").style.color = "#666";
 
-  for (const param of parameters) {
+  for (const param of editableParameters()) {
     param.set(param.defaultValue);
     if (param.sync) param.sync(param.defaultValue, false);
   }
@@ -786,53 +1163,66 @@ const parameters = [
   { label: "扇形の重なり", min: 0, max: 0.08, step: 0.001, get: () => sectorOverlap, set: (v) => { sectorOverlap = v; } },
   { label: "ロゴ半径", min: 60, max: 260, step: 1, get: () => logoR, set: (v) => { logoR = v; } },
   { label: "ロゴ回転", min: 0, max: TWO_PI, step: 0.01, get: () => logoRotation, set: (v) => { logoRotation = v; } },
+  { label: "ロゴ随机回转幅度", min: 0, max: 0.8, step: 0.005, get: () => logoRandomRotationAmount, set: (v) => { logoRandomRotationAmount = v; } },
+  { label: "ロゴ随机回转速度", min: 0, max: 3, step: 0.01, get: () => logoRandomRotationSpeed, set: (v) => { logoRandomRotationSpeed = v; } },
+  { label: "中心灰度", min: 0, max: 255, step: 1, get: () => logoGray, set: (v) => { logoGray = v; } },
+  { label: "外侧灰度增量", min: 0, max: 255, step: 1, get: () => logoGrayVariation, set: (v) => { logoGrayVariation = v; } },
   { label: "アニメ速度", min: 0, max: 0.012, step: 0.0001, get: () => baseTimeStep, set: (v) => { baseTimeStep = v; } },
-  { label: "最大フレーム補正", min: 0.25, max: 5, step: 0.05, get: () => maxFrameStep, set: (v) => { maxFrameStep = v; } },
 
-  { label: "角丸 最小", min: 0, max: 20, step: 0.1, get: () => cellCornerRoundnessMin, set: (v) => { cellCornerRoundnessMin = v; } },
   { label: "角丸 最大", min: 0, max: 20, step: 0.1, get: () => cellCornerRoundnessMax, set: (v) => { cellCornerRoundnessMax = v; } },
-  { label: "角丸 変化速度", min: 0, max: 0.2, step: 0.001, get: () => cellCornerRoundnessSpeed, set: (v) => { cellCornerRoundnessSpeed = v; } },
-
-  { label: "融け量 最小", min: 0, max: 0.45, step: 0.005, get: () => cellMeltAmountMin, set: (v) => { cellMeltAmountMin = v; } },
-  { label: "融け量 最大", min: 0, max: 0.45, step: 0.005, get: () => cellMeltAmountMax, set: (v) => { cellMeltAmountMax = v; } },
-  { label: "融け量 変化速度", min: 0, max: 0.1, step: 0.001, get: () => cellMeltAmountSpeed, set: (v) => { cellMeltAmountSpeed = v; } },
-
-  { label: "辺の緩み 最小", min: 0, max: 0.35, step: 0.005, get: () => cellEdgeSlackMin, set: (v) => { cellEdgeSlackMin = v; } },
-  { label: "辺の緩み 最大", min: 0, max: 0.35, step: 0.005, get: () => cellEdgeSlackMax, set: (v) => { cellEdgeSlackMax = v; } },
-  { label: "辺の緩み 変化速度", min: 0, max: 0.15, step: 0.001, get: () => cellEdgeSlackSpeed, set: (v) => { cellEdgeSlackSpeed = v; } },
-
   { label: "周波数ゆらぎ", min: 0, max: 2, step: 0.01, get: () => lineFrequencyRandomness, set: (v) => { lineFrequencyRandomness = v; } },
   { label: "角度ゆらぎ", min: 0, max: 0.8, step: 0.005, get: () => lineAngleRandomness, set: (v) => { lineAngleRandomness = v; } },
   { label: "半径ゆらぎ", min: 0, max: 0.8, step: 0.005, get: () => lineRadiusRandomness, set: (v) => { lineRadiusRandomness = v; } },
-  { label: "線ゆらぎ速度", min: 0, max: 0.08, step: 0.001, get: () => lineRandomnessSpeed, set: (v) => { lineRandomnessSpeed = v; } },
 
-  { label: "局所拡大 最小", min: 0.2, max: 3, step: 0.01, get: () => cellLocalScaleMin, set: (v) => { cellLocalScaleMin = v; } },
   { label: "局所拡大 最大", min: 0.2, max: 4, step: 0.01, get: () => cellLocalScaleMax, set: (v) => { cellLocalScaleMax = v; } },
-  { label: "局所拡大 変化速度", min: 0, max: 0.15, step: 0.001, get: () => cellLocalScaleSpeed, set: (v) => { cellLocalScaleSpeed = v; } },
-
-  { label: "境界拡大 範囲", min: 0, max: 180, step: 1, get: () => cellBoundaryScaleRange, set: (v) => { cellBoundaryScaleRange = v; } },
   { label: "境界拡大 最大", min: 1, max: 8, step: 0.05, get: () => cellBoundaryScaleMax, set: (v) => { cellBoundaryScaleMax = v; } },
-  { label: "境界拡大 変化速度", min: 0, max: 0.12, step: 0.001, get: () => cellBoundaryScaleSpeed, set: (v) => { cellBoundaryScaleSpeed = v; } },
-  { label: "境界の柔らかさ", min: 0.05, max: 1.5, step: 0.01, get: () => cellBoundaryScaleSoftness, set: (v) => { cellBoundaryScaleSoftness = v; } },
 
   { label: "最終円マスク内側量", min: 0, max: 80, step: 1, get: () => finalCircleMaskInset, set: (v) => { finalCircleMaskInset = v; } },
+  { label: "裁切 X", min: -450, max: 450, step: 1, get: () => cropX, set: (v) => { cropX = v; } },
+  { label: "裁切 Y", min: -450, max: 450, step: 1, get: () => cropY, set: (v) => { cropY = v; } },
+  { label: "裁切 幅", min: 20, max: 900, step: 1, get: () => cropW, set: (v) => { cropW = v; } },
+  { label: "裁切 高", min: 20, max: 900, step: 1, get: () => cropH, set: (v) => { cropH = v; } },
+
+  { type: "section", label: "文字" },
+  { label: "文字半径", min: 120, max: 390, step: 1, get: () => textRadius, set: (v) => { textRadius = v; } },
+  { label: "文字圆周位置", min: 0, max: TWO_PI, step: 0.01, get: () => textArcAngle, set: (v) => { textArcAngle = v; } },
+  { label: "文字 Y", min: -160, max: 160, step: 1, get: () => textYOffset, set: (v) => { textYOffset = v; } },
+  { label: "文字サイズ", min: 8, max: 96, step: 1, get: () => textFontSize, set: (v) => { textFontSize = v; } },
+  { label: "文字字重", min: 100, max: 900, step: 10, get: () => textFontWeight, set: (v) => { textFontWeight = Math.round(v / 10) * 10; } },
+  { label: "文字字重呼吸", min: 0, max: 220, step: 5, get: () => textFontWeightBreath, set: (v) => { textFontWeightBreath = v; } },
+  { label: "文字字间距", min: -10, max: 40, step: 0.5, get: () => textLetterSpacing, set: (v) => { textLetterSpacing = v; } },
+  { label: "sugar-n间距", min: -20, max: 80, step: 0.5, get: () => nGap, set: (v) => { nGap = v; } },
+  { label: "文字半径呼吸", min: 0, max: 12, step: 0.1, get: () => textRadiusBreath, set: (v) => { textRadiusBreath = v; } },
+  { label: "文字字距呼吸", min: 0, max: 3, step: 0.05, get: () => textLetterSpacingBreath, set: (v) => { textLetterSpacingBreath = v; } },
+  { label: "文字呼吸速度", min: 0, max: 6, step: 0.01, get: () => textBreathSpeed, set: (v) => { textBreathSpeed = v; } },
+  { label: "文字灰度", min: 0, max: 255, step: 1, get: () => textGray, set: (v) => { textGray = v; } },
+  { label: "文字展开延迟", min: 0, max: 5, step: 0.1, get: () => textIntroDelay, set: (v) => { textIntroDelay = v; } },
+  { label: "文字展开时长", min: 0.2, max: 12, step: 0.1, get: () => textIntroDuration, set: (v) => { textIntroDuration = v; } },
+  { label: "n扩展时长", min: 0.2, max: 8, step: 0.1, get: () => nBurstDuration, set: (v) => { nBurstDuration = v; } },
+  { label: "n停留时间", min: 0, max: 8, step: 0.1, get: () => nHoldDuration, set: (v) => { nHoldDuration = v; } },
+  { label: "n回收开始", min: 0.1, max: 0.95, step: 0.01, get: () => nRetractStart, set: (v) => { nRetractStart = v; } },
+  { label: "n内容变化速度", min: 0, max: 24, step: 0.1, get: () => nContentChangeSpeed, set: (v) => { nContentChangeSpeed = v; } },
+  { label: "n算式固定时间", min: 0, max: 12, step: 0.1, get: () => nFormulaSettleTime, set: (v) => { nFormulaSettleTime = v; } },
+  { label: "n触发最短间隔", min: 0.2, max: 20, step: 0.1, get: () => nBurstMinDelay, set: (v) => { nBurstMinDelay = v; } },
+  { label: "n触发最长间隔", min: 0.2, max: 30, step: 0.1, get: () => nBurstMaxDelay, set: (v) => { nBurstMaxDelay = v; } },
+  { label: "n扩展半径偏移", min: -120, max: 120, step: 1, get: () => nExpansionRadiusOffset, set: (v) => { nExpansionRadiusOffset = v; } },
+  { label: "n扩展弧长", min: 0.2, max: TWO_PI, step: 0.01, get: () => nExpansionArc, set: (v) => { nExpansionArc = v; } },
+  { label: "n字重", min: 100, max: 900, step: 10, get: () => nFontWeight, set: (v) => { nFontWeight = Math.round(v / 10) * 10; } },
+  { label: "n字重呼吸", min: 0, max: 220, step: 5, get: () => nFontWeightBreath, set: (v) => { nFontWeightBreath = v; } },
+  { label: "n字号", min: 4, max: 40, step: 1, get: () => nRingSize, set: (v) => { nRingSize = v; } },
+  { label: "n扩展字间距", min: -4, max: 60, step: 0.5, get: () => nRingLetterSpacing, set: (v) => { nRingLetterSpacing = v; } },
+  { label: "n扩展数量", min: 1, max: 32, step: 1, get: () => nRingCount, set: (v) => { nRingCount = Math.round(v); } },
+  { label: "n扩展内容", min: 0, max: 2, step: 1, get: () => nRingContentMode, set: (v) => { nRingContentMode = Math.round(v); } },
+
   { label: "デブリサイズ 最小", min: 20, max: 420, step: 1, reset: true, get: () => debrisSizeMin, set: (v) => { debrisSizeMin = v; } },
   { label: "デブリサイズ 最大", min: 20, max: 520, step: 1, reset: true, get: () => debrisSizeMax, set: (v) => { debrisSizeMax = v; } },
   { label: "デブリ数", min: 1, max: 48, step: 1, reset: true, get: () => debrisCount, set: (v) => { debrisCount = Math.round(v); } },
   { label: "シード", min: 1, max: 999999, step: 1, reset: true, get: () => seedValue, set: (v) => { seedValue = Math.round(v); } },
-
-  { label: "黒量補正 ばね", min: 0, max: 0.2, step: 0.001, get: () => blackPixelScaleSpring, set: (v) => { blackPixelScaleSpring = v; } },
-  { label: "黒量補正 減衰", min: 0.1, max: 0.98, step: 0.01, get: () => blackPixelScaleDamping, set: (v) => { blackPixelScaleDamping = v; } },
-  { label: "黒量補正 最大速度", min: 0, max: 0.08, step: 0.001, get: () => blackPixelScaleMaxVelocity, set: (v) => { blackPixelScaleMaxVelocity = v; } },
-  { label: "黒量スケール 最小", min: 0.5, max: 1.5, step: 0.01, get: () => blackPixelScaleMin, set: (v) => { blackPixelScaleMin = v; } },
-  { label: "黒量スケール 最大", min: 0.5, max: 2.5, step: 0.01, get: () => blackPixelScaleMax, set: (v) => { blackPixelScaleMax = v; } },
-  { label: "黒判定しきい値", min: 0, max: 255, step: 1, get: () => blackPixelThreshold, set: (v) => { blackPixelThreshold = v; } },
-  { label: "黒量補正 デッドゾーン", min: 0, max: 0.04, step: 0.001, get: () => blackPixelScaleDeadZone, set: (v) => { blackPixelScaleDeadZone = v; } },
-  { label: "黒量目標 平滑化", min: 0, max: 0.4, step: 0.005, get: () => blackPixelTargetSmoothing, set: (v) => { blackPixelTargetSmoothing = v; } },
-  { label: "黒量縮小 下限", min: 0.9, max: 1, step: 0.001, get: () => blackPixelMaxShrinkTarget, set: (v) => { blackPixelMaxShrinkTarget = v; } },
-  { label: "外接サイズ 許容幅", min: 0, max: 0.5, step: 0.005, get: () => blackPixelBoundsTolerance, set: (v) => { blackPixelBoundsTolerance = v; } },
-  { label: "外接サイズ 重み", min: 0, max: 1, step: 0.01, get: () => blackPixelBoundsWeight, set: (v) => { blackPixelBoundsWeight = v; } },
 ];
+
+function editableParameters() {
+  return parameters.filter((param) => typeof param.get === "function" && typeof param.set === "function");
+}
 
 function formatParamValue(value, step) {
   if (step >= 1) return String(Math.round(value));
@@ -866,6 +1256,14 @@ function initFormulaEditor() {
 function initParameterPanel() {
   const panel = document.getElementById("parameterPanel");
   for (const param of parameters) {
+    if (param.type === "section") {
+      const heading = document.createElement("h2");
+      heading.className = "parameter-section";
+      heading.textContent = param.label;
+      panel.append(heading);
+      continue;
+    }
+
     param.defaultValue = param.get();
     const field = document.createElement("div");
     field.className = "field";

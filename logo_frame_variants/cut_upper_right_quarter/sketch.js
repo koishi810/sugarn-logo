@@ -68,11 +68,17 @@ let cellBoundaryScaleSoftness = 0.68;
 
 let finalCircleMaskInset = 20;
 
+let cutX = 0;
+let cutY = -214;
+let cutW = 214;
+let cutH = 214;
+
 let debrisSizeMin = 230;
 let debrisSizeMax = 260;
 let debrisCount = 10;
 let seedValue = 985933;
 let randomState = 1;
+const frameVariant = "cutUpperRightQuarter";
 
 let defaultCurveFormula = `(() => {
   const nt = time * 0.15;
@@ -287,6 +293,7 @@ function draw(now = performance.now()) {
   ctx.rotate(logoRotation);
   drawOuterMask();
   updateBlackPixelScale(frameStep);
+  drawLogoFrameVariant();
 
   requestAnimationFrame(draw);
 }
@@ -656,6 +663,32 @@ function drawFinalCircleCleanupMask() {
   ctx.restore();
 }
 
+function drawLogoFrameVariant() {
+  ctx.save();
+  ctx.rotate(-logoRotation);
+  drawCutRectMask(cutX, cutY, cutW, cutH);
+  ctx.restore();
+}
+
+function drawCutRectMask(x, y, w, h) {
+  ctx.save();
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(x, y, w, h);
+  ctx.restore();
+}
+
+function drawOutsideRectMask(x, y, w, h) {
+  const m = canvas.width;
+  ctx.save();
+  ctx.fillStyle = "#fff";
+  ctx.beginPath();
+  ctx.rect(-m, -m, m * 2, m * 2);
+  ctx.rect(x, y, w, h);
+  ctx.fill("evenodd");
+  ctx.restore();
+}
+
+
 function savePng() {
   const a = document.createElement("a");
   a.download = `noise_curves_logo_${String(Math.floor(performance.now())).padStart(4, "0")}.png`;
@@ -690,6 +723,8 @@ function currentSettingsText() {
     exportedAt: new Date().toISOString(),
     curveFormula: curveFormulaText,
     cropMode: useHexCrop ? "六角形" : "円形",
+    cropVariant: frameVariant,
+    cutRect: { x: cutX, y: cutY, width: cutW, height: cutH },
     paused,
     time: t,
     parameters: Object.fromEntries(parameters.map((param) => [parameterKey(param.label), param.get()])),
@@ -816,6 +851,10 @@ const parameters = [
   { label: "境界の柔らかさ", min: 0.05, max: 1.5, step: 0.01, get: () => cellBoundaryScaleSoftness, set: (v) => { cellBoundaryScaleSoftness = v; } },
 
   { label: "最終円マスク内側量", min: 0, max: 80, step: 1, get: () => finalCircleMaskInset, set: (v) => { finalCircleMaskInset = v; } },
+  { label: "切除 X", min: -450, max: 450, step: 1, get: () => cutX, set: (v) => { cutX = v; } },
+  { label: "切除 Y", min: -450, max: 450, step: 1, get: () => cutY, set: (v) => { cutY = v; } },
+  { label: "切除 幅", min: 20, max: 900, step: 1, get: () => cutW, set: (v) => { cutW = v; } },
+  { label: "切除 高", min: 20, max: 900, step: 1, get: () => cutH, set: (v) => { cutH = v; } },
   { label: "デブリサイズ 最小", min: 20, max: 420, step: 1, reset: true, get: () => debrisSizeMin, set: (v) => { debrisSizeMin = v; } },
   { label: "デブリサイズ 最大", min: 20, max: 520, step: 1, reset: true, get: () => debrisSizeMax, set: (v) => { debrisSizeMax = v; } },
   { label: "デブリ数", min: 1, max: 48, step: 1, reset: true, get: () => debrisCount, set: (v) => { debrisCount = Math.round(v); } },
