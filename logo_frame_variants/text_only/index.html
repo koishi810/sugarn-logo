@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>S^n ノイズ曲線 Web / 文字のみ</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="app">
+      <section class="stage" aria-label="ロゴプレビュー">
+        <canvas id="logoCanvas" width="2700" height="2700" aria-label="生成ロゴキャンバス"></canvas>
+        <nav class="toolbar" aria-label="スケッチ操作">
+          <button id="pauseButton" type="button">一時停止</button>
+          <button id="resetButton" type="button">再生成</button>
+          <button id="cropButton" type="button">円形</button>
+          <button id="saveButton" type="button">PNGを保存</button>
+        </nav>
+      </section>
+      <aside class="panel" aria-label="パラメータ">
+        <nav class="data-actions" aria-label="データ操作">
+          <button id="copyDataButton" type="button">データをコピー</button>
+          <button id="initButton" type="button">初期化</button>
+          <button id="exportButton" type="button">保存</button>
+        </nav>
+        <div class="formula-editor">
+          <label for="curveFormula">曲線式</label>
+          <textarea id="curveFormula" spellcheck="false"></textarea>
+          <p class="formula-help">使用できる変数: angle, radius, time, frequency。例: abs(cos(frequency * angle + time))</p>
+          <div id="formulaStatus" class="formula-status">式は有効です</div>
+        </div>
+        <div class="formula-editor">
+          <label for="nFormulaList">nの数式リスト</label>
+          <textarea id="nFormulaList" spellcheck="false"></textarea>
+          <p class="formula-help">1行に1つの数式を入力します。nの展開時にランダムに1行を選び、文字ごとに確定します。</p>
+        </div>
+        <div id="parameterPanel" class="parameter-panel"></div>
+      </aside>
+    </main>
+    <script src="./sketch.js?v=20260620-text-only"></script>
+  </body>
+</html>

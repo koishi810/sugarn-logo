@@ -4,6 +4,8 @@ Three standalone web versions for comparing final logo crops.
 
 - `corner_lower_left/`: keeps the lower-left quarter of the logo plus a small extra overlap across the center.
 - `center_square/`: keeps a centered square crop. It is intentionally large, so it only cuts the edge when the logo scale is large.
+- `no_text/`: uses the current centered square logo setup without drawing any text.
+- `text_only/`: draws only the `sugarⁿ` text as a straight, non-circular lockup.
 - `lower_vertical_rect/`: keeps a vertical rectangle with its center shifted slightly downward.
 - `cut_upper_right_quarter/`: cuts away only the upper-right quarter of the logo.
 
